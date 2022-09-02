@@ -11,8 +11,8 @@ type Users struct {
 }
 
 type SignupForm struct {
-	Email    string
-	Password string
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
 }
 
 func NewUsers() *Users {
@@ -26,10 +26,9 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
+	var form SignupForm
+	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-
-	fmt.Fprintln(w, r.PostFormValue("email"))
-	fmt.Fprintln(w, r.PostFormValue("password"))
+	fmt.Fprint(w, form)
 }

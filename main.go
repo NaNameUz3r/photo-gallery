@@ -4,25 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"photo-gallery/controllers"
-	"photo-gallery/views"
 
 	"github.com/gorilla/mux"
 )
-
-var (
-	homepageView *views.View
-	contactView  *views.View
-)
-
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	must(homepageView.Render(w, nil))
-}
-
-func contactHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	must(contactView.Render(w, nil))
-}
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Contetn-Type", "text/html")
@@ -31,13 +15,12 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	homepageView = views.NewView("bootstrap", "views/home.gohtml")
-	contactView = views.NewView("bootstrap", "views/contact.gohtml")
+	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", homeHandler).Methods("GET")
-	r.HandleFunc("/contact", contactHandler).Methods("GET")
+	r.Handle("/", staticC.Home).Methods("GET")
+	r.Handle("/contact", staticC.Contact).Methods("GET")
 	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
