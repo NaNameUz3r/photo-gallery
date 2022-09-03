@@ -7,6 +7,7 @@ import (
 )
 
 var LAYOUTSDIR string = "views/layouts/"
+var TEPLATEDIR string = "views/"
 var TEMPLATEEXT string = ".gohtml"
 
 type View struct {
@@ -15,6 +16,8 @@ type View struct {
 }
 
 func NewView(layout string, files ...string) *View {
+	addTemplatePath(files)
+	addTemplateExt(files)
 	files = append(files, parseLayoutFiles()...)
 
 	t, err := template.ParseFiles(files...)
@@ -44,5 +47,17 @@ func (v *View) Render(w http.ResponseWriter, data interface{}) error {
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := v.Render(w, nil); err != nil {
 		panic(err)
+	}
+}
+
+func addTemplatePath(files []string) {
+	for i, f := range files {
+		files[i] = TEPLATEDIR + f
+	}
+}
+
+func addTemplateExt(files []string) {
+	for i, f := range files {
+		files[i] = f + TEMPLATEEXT
 	}
 }
