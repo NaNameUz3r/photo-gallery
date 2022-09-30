@@ -4,8 +4,18 @@ import (
 	"fmt"
 	"net/http"
 	"photo-gallery/controllers"
+	"photo-gallery/models"
 
 	"github.com/gorilla/mux"
+)
+
+const (
+	host     = "localhost"
+	port     = "5432"
+	user     = "admin"
+	password = "qwerty"
+	dbname   = "photogallery_dev"
+	sslmode  = "disable"
 )
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
@@ -15,8 +25,14 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	us, err := models.NewUserService(psqlInfo)
+	must(err)
+	defer us.CloseConnection()
+	us.AutoMigrate()
+
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers()
+	usersC := controllers.NewUsers(us)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
