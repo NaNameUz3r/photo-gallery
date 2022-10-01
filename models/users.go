@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("models: resource not found")
-	ErrInvalidId = errors.New("models: Provided invalid object ID")
-	userPwPepper = viperEnvVariable("USERPWPEPPER")
+	ErrNotFound        = errors.New("models: resource not found")
+	ErrInvalidId       = errors.New("models: Provided invalid object ID")
+	ErrInvalidPassword = errors.New("models: Incorrect password provided")
+	userPwPepper       = viperEnvVariable("USERPWPEPPER")
 )
 
 type UserService struct {
@@ -60,6 +61,26 @@ func first(db *gorm.DB, dst interface{}) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+func (us *UserService) Authenticate(email, password string) (*User, error) {
+	foundUser, err := us.ByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	userPasswordHashBytes := []byte(foundUser.PasswordHash)
+	pepperedPasswordBytes := []byte(password + userPwPepper)
+	err = bcrypt.CompareHashAndPassword(userPasswordHashBytes, pepperedPasswordBytes)
+	if err != nil {
+		switch err {
+		case bcrypt.ErrMismatchedHashAndPassword:
+			return nil, ErrInvalidPassword
+		default:
+			return nil, err
+		}
+	}
+
+	return foundUser, nil
 }
 
 func (us *UserService) Create(user *User) error {
