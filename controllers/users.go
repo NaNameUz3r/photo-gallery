@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"photo-gallery/models"
 	"photo-gallery/views"
@@ -42,5 +41,4 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprint(w, form)
 }

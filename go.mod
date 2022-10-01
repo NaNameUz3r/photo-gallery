@@ -18,7 +18,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/lib/pq v1.10.6 // indirect
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gorm.io/driver/postgres v1.3.9 // indirect
 	gorm.io/gorm v1.23.8 // indirect
