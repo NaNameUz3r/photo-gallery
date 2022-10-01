@@ -3,4 +3,4 @@ Photo gallery application written in Go.
 
 #TIPS:
 
-App password pepper should be set in .env file in project root directory as value of **USERPWPEPPER** variable.
+App password pepper and HMAC secret key should be defined in .env file located in project root directory as corresponding value of **USER_PASSWORD_PEPPER** and **HMAC_SECRET_KEY** variables.
