@@ -2,9 +2,11 @@ package models
 
 import (
 	"errors"
+	"log"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/spf13/viper"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -12,6 +14,7 @@ import (
 var (
 	ErrNotFound  = errors.New("models: resource not found")
 	ErrInvalidId = errors.New("models: Provided invalid object ID")
+	userPwPepper = viperEnvVariable("USERPWPEPPER")
 )
 
 type UserService struct {
@@ -97,4 +100,18 @@ func (us *UserService) AutoMigrate() error {
 		return err
 	}
 	return nil
+}
+
+func viperEnvVariable(key string) string {
+
+	viper.SetConfigFile(".env")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Error while reading config file %s. \nProbably starting app not from project root directory", err)
+	}
+	value, ok := viper.Get(key).(string)
+	if !ok {
+		log.Fatalf("Invalid type assertation, or wrong variable key used")
+	}
+	return value
 }
