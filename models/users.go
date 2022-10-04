@@ -5,6 +5,7 @@ import (
 	"log"
 	"photo-gallery/hash"
 	"photo-gallery/rand"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -17,6 +18,7 @@ var (
 	ErrNotFound        = errors.New("models: resource not found")
 	ErrInvalidId       = errors.New("models: Provided invalid object ID")
 	ErrInvalidPassword = errors.New("models: Incorrect password provided")
+	ErrRequireEmail    = errors.New("Email address is required.")
 	userPwPepper       = viperEnvVariable("USER_PASSWORD_PEPPER")
 	hmacSecretKey      = viperEnvVariable("HMAC_SECRET_KEY")
 )
@@ -115,6 +117,17 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
+func (uv *userValidator) ByEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	if err := runUserValidations(&user, uv.normalizeEmail); err != nil {
+		return nil, err
+	}
+
+	return uv.UserDB.ByEmail(user.Email)
+}
+
 func (uv *userValidator) ByRememberedToken(token string) (*User, error) {
 	user := User{
 		RememberToken: token,
@@ -129,7 +142,9 @@ func (uv *userValidator) Create(user *User) error {
 	err := runUserValidations(user,
 		uv.bcryptPassword,
 		uv.setDefaultToken,
-		uv.hmacRememberToken)
+		uv.hmacRememberToken,
+		uv.normalizeEmail,
+		uv.requireEmail)
 	if err != nil {
 		return err
 	}
@@ -138,7 +153,11 @@ func (uv *userValidator) Create(user *User) error {
 }
 
 func (uv *userValidator) Update(user *User) error {
-	err := runUserValidations(user, uv.bcryptPassword, uv.hmacRememberToken)
+	err := runUserValidations(user,
+		uv.bcryptPassword,
+		uv.hmacRememberToken,
+		uv.normalizeEmail,
+		uv.requireEmail)
 	if err != nil {
 		return err
 	}
@@ -212,6 +231,20 @@ func (uv *userValidator) idGreaterThan(n uint) userValidationFunc {
 		}
 		return nil
 	})
+}
+
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.TrimSpace(user.Email)
+	return nil
+
+}
+
+func (uv *userValidator) requireEmail(user *User) error {
+	if user.Email == "" {
+		return ErrRequireEmail
+	}
+	return nil
 }
 
 var _ UserDB = &userGorm{}
