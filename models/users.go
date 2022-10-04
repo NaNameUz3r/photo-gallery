@@ -5,6 +5,7 @@ import (
 	"log"
 	"photo-gallery/hash"
 	"photo-gallery/rand"
+	"regexp"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -17,8 +18,10 @@ import (
 var (
 	ErrNotFound        = errors.New("models: resource not found")
 	ErrInvalidId       = errors.New("models: Provided invalid object ID")
-	ErrInvalidPassword = errors.New("models: Incorrect password provided")
-	ErrRequireEmail    = errors.New("Email address is required.")
+	ErrInvalidPassword = errors.New("models: Invalid password provided")
+	ErrInvalidEmail    = errors.New("models: Invalid email provided")
+	ErrRequireEmail    = errors.New("models: Email address is required.")
+	ErrEmailTaken      = errors.New("models: Email address is already taken")
 	userPwPepper       = viperEnvVariable("USER_PASSWORD_PEPPER")
 	hmacSecretKey      = viperEnvVariable("HMAC_SECRET_KEY")
 )
@@ -81,10 +84,7 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	}
 
 	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := &userValidator{
-		hmac:   hmac,
-		UserDB: ug,
-	}
+	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
 	}, nil
@@ -114,7 +114,16 @@ var _ UserDB = &userValidator{}
 
 type userValidator struct {
 	UserDB
-	hmac hash.HMAC
+	hmac        hash.HMAC
+	emailRegexp *regexp.Regexp
+}
+
+func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+	return &userValidator{
+		UserDB:      udb,
+		hmac:        hmac,
+		emailRegexp: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`),
+	}
 }
 
 func (uv *userValidator) ByEmail(email string) (*User, error) {
@@ -144,7 +153,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.setDefaultToken,
 		uv.hmacRememberToken,
 		uv.normalizeEmail,
-		uv.requireEmail)
+		uv.requireEmail,
+		uv.checkEmailFormat,
+		uv.checkEmailAvailable)
 	if err != nil {
 		return err
 	}
@@ -157,7 +168,9 @@ func (uv *userValidator) Update(user *User) error {
 		uv.bcryptPassword,
 		uv.hmacRememberToken,
 		uv.normalizeEmail,
-		uv.requireEmail)
+		uv.requireEmail,
+		uv.checkEmailFormat,
+		uv.checkEmailAvailable)
 	if err != nil {
 		return err
 	}
@@ -243,6 +256,31 @@ func (uv *userValidator) normalizeEmail(user *User) error {
 func (uv *userValidator) requireEmail(user *User) error {
 	if user.Email == "" {
 		return ErrRequireEmail
+	}
+	return nil
+}
+
+func (uv *userValidator) checkEmailFormat(user *User) error {
+	if user.Email == "" {
+		return nil
+	}
+	if !uv.emailRegexp.MatchString(user.Email) {
+		return ErrInvalidEmail
+	}
+	return nil
+}
+
+func (uv *userValidator) checkEmailAvailable(user *User) error {
+	existing, err := uv.ByEmail(user.Email)
+
+	if err == ErrNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if user.ID != existing.ID {
+		return ErrEmailTaken
 	}
 	return nil
 }
