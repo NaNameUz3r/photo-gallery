@@ -16,16 +16,18 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("models: resource not found.")
-	ErrInvalidId        = errors.New("models: Provided invalid object ID.")
-	ErrInvalidPassword  = errors.New("models: Invalid password provided.")
-	ErrInvalidEmail     = errors.New("models: Invalid email provided.")
-	ErrTooShortPassword = errors.New("models: Password must be at least 16 characters long.")
-	ErrRequireEmail     = errors.New("models: Email address is required.")
-	ErrRequirePassword  = errors.New("models: password is required.")
-	ErrEmailTaken       = errors.New("models: Email address is already taken.")
-	userPwPepper        = viperEnvVariable("USER_PASSWORD_PEPPER")
-	hmacSecretKey       = viperEnvVariable("HMAC_SECRET_KEY")
+	ErrNotFound             = errors.New("models: resource not found.")
+	ErrInvalidId            = errors.New("models: Provided invalid object ID.")
+	ErrInvalidPassword      = errors.New("models: Invalid password provided.")
+	ErrInvalidEmail         = errors.New("models: Invalid email provided.")
+	ErrTooShortPassword     = errors.New("models: Password must be at least 16 characters long.")
+	ErrRequireEmail         = errors.New("models: Email address is required.")
+	ErrRequirePassword      = errors.New("models: password is required.")
+	ErrTokenBytesLenToShort = errors.New("models: remember token must be at least 32 bytes long")
+	ErrRequireTokenHash     = errors.New("models: token hash is required.")
+	ErrEmailTaken           = errors.New("models: Email address is already taken.")
+	userPwPepper            = viperEnvVariable("USER_PASSWORD_PEPPER")
+	hmacSecretKey           = viperEnvVariable("HMAC_SECRET_KEY")
 )
 
 type User struct {
@@ -156,7 +158,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.bcryptPassword,
 		uv.requirePasswordHash,
 		uv.setDefaultToken,
+		uv.checkRememberTokenLength,
 		uv.hmacRememberToken,
+		uv.requredTokenHash,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.checkEmailFormat,
@@ -173,7 +177,9 @@ func (uv *userValidator) Update(user *User) error {
 		uv.checkPasswordLength,
 		uv.bcryptPassword,
 		uv.requirePasswordHash,
+		uv.checkRememberTokenLength,
 		uv.hmacRememberToken,
+		uv.requredTokenHash,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.checkEmailFormat,
@@ -266,6 +272,29 @@ func (uv *userValidator) setDefaultToken(user *User) error {
 		return err
 	}
 	user.RememberToken = token
+	return nil
+}
+
+func (uv *userValidator) checkRememberTokenLength(user *User) error {
+	if user.RememberToken == "" {
+		return nil
+	}
+
+	n, err := rand.NBytesLen(user.RememberToken)
+	if err != nil {
+		return err
+	}
+	if n < 32 {
+		return ErrTokenBytesLenToShort
+	}
+
+	return nil
+}
+
+func (uv *userValidator) requredTokenHash(user *User) error {
+	if user.RememberTokenHash == "" {
+		return ErrRequireTokenHash
+	}
 	return nil
 }
 

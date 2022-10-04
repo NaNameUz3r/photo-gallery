@@ -28,3 +28,11 @@ func GenBytes(n int) ([]byte, error) {
 	}
 	return b, nil
 }
+
+func NBytesLen(base64string string) (int, error) {
+	b, err := base64.URLEncoding.DecodeString(base64string)
+	if err != nil {
+		return -1, err
+	}
+	return len(b), nil
+}
