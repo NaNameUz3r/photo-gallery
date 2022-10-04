@@ -116,15 +116,16 @@ type userValidator struct {
 }
 
 func (uv *userValidator) ByRememberedToken(token string) (*User, error) {
-	hashedToken := uv.hmac.HashFun(token)
-	return uv.UserDB.ByRememberedToken(hashedToken)
+	user := User{
+		RememberToken: token,
+	}
+	if err := runUserValidations(&user, uv.hmacRememberToken); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByRememberedToken(user.RememberTokenHash)
 }
 
 func (uv *userValidator) Create(user *User) error {
-	if err := runUserValidations(user, uv.bcryptPassword); err != nil {
-		return err
-	}
-
 	if user.RememberToken == "" {
 		token, err := rand.RememberToken()
 		if err != nil {
@@ -132,18 +133,18 @@ func (uv *userValidator) Create(user *User) error {
 		}
 		user.RememberToken = token
 	}
+	err := runUserValidations(user, uv.bcryptPassword, uv.hmacRememberToken)
+	if err != nil {
+		return err
+	}
 
-	user.RememberTokenHash = uv.hmac.HashFun(user.RememberToken)
 	return uv.UserDB.Create(user)
 }
 
 func (uv *userValidator) Update(user *User) error {
-	if err := runUserValidations(user, uv.bcryptPassword); err != nil {
+	err := runUserValidations(user, uv.bcryptPassword, uv.hmacRememberToken)
+	if err != nil {
 		return err
-	}
-
-	if user.RememberToken != "" {
-		user.RememberTokenHash = uv.hmac.HashFun(user.RememberToken)
 	}
 
 	return uv.UserDB.Update(user)
@@ -180,6 +181,15 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+	return nil
+}
+
+func (uv *userValidator) hmacRememberToken(user *User) error {
+	if user.RememberToken == "" {
+		return nil
+	}
+
+	user.RememberTokenHash = uv.hmac.HashFun(user.RememberToken)
 	return nil
 }
 
