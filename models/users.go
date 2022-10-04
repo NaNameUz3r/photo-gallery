@@ -16,14 +16,16 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("models: resource not found")
-	ErrInvalidId       = errors.New("models: Provided invalid object ID")
-	ErrInvalidPassword = errors.New("models: Invalid password provided")
-	ErrInvalidEmail    = errors.New("models: Invalid email provided")
-	ErrRequireEmail    = errors.New("models: Email address is required.")
-	ErrEmailTaken      = errors.New("models: Email address is already taken")
-	userPwPepper       = viperEnvVariable("USER_PASSWORD_PEPPER")
-	hmacSecretKey      = viperEnvVariable("HMAC_SECRET_KEY")
+	ErrNotFound         = errors.New("models: resource not found.")
+	ErrInvalidId        = errors.New("models: Provided invalid object ID.")
+	ErrInvalidPassword  = errors.New("models: Invalid password provided.")
+	ErrInvalidEmail     = errors.New("models: Invalid email provided.")
+	ErrTooShortPassword = errors.New("models: Password must be at least 16 characters long.")
+	ErrRequireEmail     = errors.New("models: Email address is required.")
+	ErrRequirePassword  = errors.New("models: password is required.")
+	ErrEmailTaken       = errors.New("models: Email address is already taken.")
+	userPwPepper        = viperEnvVariable("USER_PASSWORD_PEPPER")
+	hmacSecretKey       = viperEnvVariable("HMAC_SECRET_KEY")
 )
 
 type User struct {
@@ -149,7 +151,10 @@ func (uv *userValidator) ByRememberedToken(token string) (*User, error) {
 
 func (uv *userValidator) Create(user *User) error {
 	err := runUserValidations(user,
+		uv.requirePassword,
+		uv.checkPasswordLength,
 		uv.bcryptPassword,
+		uv.requirePasswordHash,
 		uv.setDefaultToken,
 		uv.hmacRememberToken,
 		uv.normalizeEmail,
@@ -165,7 +170,9 @@ func (uv *userValidator) Create(user *User) error {
 
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValidations(user,
+		uv.checkPasswordLength,
 		uv.bcryptPassword,
+		uv.requirePasswordHash,
 		uv.hmacRememberToken,
 		uv.normalizeEmail,
 		uv.requireEmail,
@@ -212,6 +219,31 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+	return nil
+}
+
+func (uv *userValidator) checkPasswordLength(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	if len(user.Password) < 16 {
+		return ErrTooShortPassword
+	}
+	return nil
+}
+
+func (uv *userValidator) requirePassword(user *User) error {
+	if user.Password == "" {
+		return ErrRequirePassword
+	}
+	return nil
+
+}
+
+func (uv *userValidator) requirePasswordHash(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrRequirePassword
+	}
 	return nil
 }
 
