@@ -3,28 +3,16 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+
 	"photo-gallery/models"
 	"photo-gallery/rand"
 	"photo-gallery/views"
 )
 
-type Users struct {
-	NewView   *views.View
-	LoginView *views.View
-	us        models.UserService
-}
-
-type SignupForm struct {
-	Username string `schema:"username"`
-	Email    string `schema:"email"`
-	Password string `schema:"password"`
-}
-
-type LoginForm struct {
-	Email    string `schema:"email"`
-	Password string `schema:"password"`
-}
-
+// NewUsers is used to create a new Users controller.
+// This function will panic if the templates are not
+// parsed correctly, and should only be used during
+// initial setup.
 func NewUsers(us models.UserService) *Users {
 	return &Users{
 		NewView:   views.NewView("bootstrap", "users/new"),
@@ -33,10 +21,39 @@ func NewUsers(us models.UserService) *Users {
 	}
 }
 
-func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	u.NewView.Render(w, nil)
+type Users struct {
+	NewView   *views.View
+	LoginView *views.View
+	us        models.UserService
 }
 
+// New is used to render the form where a user can
+// create a new user account.
+//
+// GET /signup
+func (u *Users) New(w http.ResponseWriter, r *http.Request) {
+	d := views.Data{
+		Alert: &views.Alert{
+			Level:   views.AlertLvlError,
+			Message: "Something went wrong",
+		},
+		Yield: "Hello!!!",
+	}
+	if err := u.NewView.Render(w, d); err != nil {
+		panic(err)
+	}
+}
+
+type SignupForm struct {
+	Username string `schema:"username"`
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
+// Create is used to process the signup form when a user
+// submits it. This is used to create a new user account.
+//
+// POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var form SignupForm
 	if err := parseForm(r, &form); err != nil {
@@ -51,7 +68,6 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	err := u.signIn(w, &user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -60,6 +76,15 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
+type LoginForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
+// Login is used to verify the provided email address and
+// password and then log the user in if they are correct.
+//
+// POST /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	form := LoginForm{}
 	if err := parseForm(r, &form); err != nil {
@@ -85,6 +110,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
+// signIn is used to sign the given user in via cookies
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	if user.RememberToken == "" {
 		token, err := rand.RememberToken()

@@ -8,8 +8,10 @@
 
   <body>
     {{template "navbar"}}
+
     <div class="container-fluid">
-      {{template "yield" .}}
+      {{template "alert" .Alert}}
+      {{template "yield" .Yield}}
 
       {{template "footer"}}
     </div>
