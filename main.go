@@ -29,7 +29,6 @@ func main() {
 	us, err := models.NewUserService(psqlInfo)
 	must(err)
 	defer us.CloseConnection()
-	// us.DestructiveReset()
 	us.AutoMigrate()
 
 	staticC := controllers.NewStatic()
@@ -38,12 +37,12 @@ func main() {
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
-	r.Handle("/signup", usersC.NewView).Methods("GET")
+	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
-	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	fmt.Println("Starting the server on :3000...")
 	http.ListenAndServe(":3000", r)
 }
 
