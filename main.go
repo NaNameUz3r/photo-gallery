@@ -26,13 +26,14 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	us, err := models.NewUserService(psqlInfo)
+	services, err := models.NewServices(psqlInfo)
 	must(err)
-	defer us.CloseConnection()
-	us.AutoMigrate()
+	// TODO: FixThis
+	// defer us.CloseConnection()
+	// us.AutoMigrate()
 
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers(us)
+	usersC := controllers.NewUsers(services.User)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
