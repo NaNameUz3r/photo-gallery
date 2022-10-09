@@ -358,14 +358,6 @@ func (ug *userGorm) ByRememberedToken(hashedToken string) (*User, error) {
 	return &user, nil
 }
 
-func first(db *gorm.DB, dst interface{}) error {
-	err := db.First(dst).Error
-	if err == gorm.ErrRecordNotFound {
-		return ErrNotFound
-	}
-	return err
-}
-
 func (ug *userGorm) Create(user *User) error {
 	return ug.db.Create(user).Error
 }
