@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"photo-gallery/context"
 )
 
 var LAYOUTSDIR string = "views/layouts/"
@@ -40,18 +41,20 @@ func parseLayoutFiles() []string {
 	return files
 }
 
-func (v *View) Render(w http.ResponseWriter, data interface{}) {
+func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
-	switch data.(type) {
+	var vd Data
+	switch d := data.(type) {
 	case Data:
-		// do nothing
+		vd = d
 	default:
-		data = Data{
+		vd = Data{
 			Yield: data,
 		}
 	}
+	vd.User = context.User(r.Context())
 	var buffer bytes.Buffer
-	if err := v.Template.ExecuteTemplate(&buffer, v.Layout, data); err != nil {
+	if err := v.Template.ExecuteTemplate(&buffer, v.Layout, vd); err != nil {
 		http.Error(w, "Somthing went wrong. If the problem persists, please contact us", http.StatusInternalServerError)
 		return
 	}
@@ -59,7 +62,7 @@ func (v *View) Render(w http.ResponseWriter, data interface{}) {
 }
 
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	v.Render(w, nil)
+	v.Render(w, r, nil)
 }
 
 func addTemplatePath(files []string) {
