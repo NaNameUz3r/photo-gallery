@@ -44,6 +44,9 @@ func (is *imageService) ByGalleryID(galleryID uint) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	for i := range imgPathes {
+		imgPathes[i] = "/" + imgPathes[i]
+	}
 	return imgPathes, nil
 }
 
