@@ -18,6 +18,7 @@
 
 {{define "signupForm"}}
 <form action="/signup" method="POST">
+  {{csrfField}}
   <div class="form-group">
     <label for="username">Username</label>
     <input type="text" name="username" class="form-control" id="username" placeholder="Your full name">

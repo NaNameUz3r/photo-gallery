@@ -6,7 +6,9 @@ import (
 	"photo-gallery/controllers"
 	"photo-gallery/middleware"
 	"photo-gallery/models"
+	"photo-gallery/rand"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 )
 
@@ -39,6 +41,10 @@ func main() {
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
 
+	isProd := false
+	b, err := rand.GenBytes(32)
+	must(err)
+	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
 	userMw := middleware.User{
 		UserService: services.User,
 	}
@@ -78,7 +84,7 @@ func main() {
 	r.PathPrefix("/assets/").Handler(assetHandler)
 
 	fmt.Println("Starting the server on :3000...")
-	http.ListenAndServe(":3000", userMw.Apply(r))
+	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
 }
 
 func must(err error) {
