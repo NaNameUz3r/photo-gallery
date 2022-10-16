@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"photo-gallery/context"
@@ -55,6 +56,7 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 	vd.User = context.User(r.Context())
 	var buffer bytes.Buffer
 	if err := v.Template.ExecuteTemplate(&buffer, v.Layout, vd); err != nil {
+		log.Println(err)
 		http.Error(w, "Somthing went wrong. If the problem persists, please contact us", http.StatusInternalServerError)
 		return
 	}
