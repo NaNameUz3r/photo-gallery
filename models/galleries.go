@@ -4,21 +4,21 @@ import "github.com/jinzhu/gorm"
 
 type Gallery struct {
 	gorm.Model
-	UserID uint     `gorm:"not_null;index"`
-	Title  string   `gorm:"not_null"`
-	Images []string `gorm:"-"`
+	UserID uint    `gorm:"not_null;index"`
+	Title  string  `gorm:"not_null"`
+	Images []Image `gorm:"-"`
 }
 
-func (g *Gallery) ImagesSplitN(n int) [][]string {
-	ret := make([][]string, n)
+func (g *Gallery) ImagesSplitN(n int) [][]Image {
+	imgLayout := make([][]Image, n)
 	for i := 0; i < n; i++ {
-		ret[i] = make([]string, 0)
+		imgLayout[i] = make([]Image, 0)
 	}
 	for i, img := range g.Images {
-		bucket := i % n
-		ret[bucket] = append(ret[bucket], img)
+		row := i % n
+		imgLayout[row] = append(imgLayout[row], img)
 	}
-	return ret
+	return imgLayout
 }
 
 type GalleryService interface {
