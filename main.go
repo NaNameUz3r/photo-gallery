@@ -12,15 +12,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const (
-	host     = "localhost"
-	port     = "5432"
-	user     = "admin"
-	password = "qwerty"
-	dbname   = "photogallery_dev"
-	sslmode  = "disable"
-)
-
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Contetn-Type", "text/html")
 	w.WriteHeader(http.StatusNotFound)
@@ -28,8 +19,15 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	services, err := models.NewServices(psqlInfo)
+	cfg := DefaultConfig()
+	dbCfg := DefaultPostgresConfig()
+	services, err := models.NewServices(
+		models.WithGorm(dbCfg.Dialect(), dbCfg.ConnectionString()),
+		models.WithLogMode(!cfg.IsProd()),
+		models.WithUser(cfg.Pepper, cfg.HMACkey),
+		models.WithGallery(),
+		models.WithImage(),
+	)
 	must(err)
 	// services.DestructiveReset()
 	defer services.CloseConnection()
@@ -41,10 +39,9 @@ func main() {
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
 
-	isProd := false
 	b, err := rand.GenBytes(32)
 	must(err)
-	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
+	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 	userMw := middleware.User{
 		UserService: services.User,
 	}
@@ -83,8 +80,8 @@ func main() {
 	assetHandler = http.StripPrefix("/assets/", assetHandler)
 	r.PathPrefix("/assets/").Handler(assetHandler)
 
-	fmt.Println("Starting the server on :3000...")
-	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
+	fmt.Printf("Starting the server on :%d...\n", cfg.Port)
+	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), csrfMw(userMw.Apply(r)))
 }
 
 func must(err error) {

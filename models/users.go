@@ -1,22 +1,14 @@
 package models
 
 import (
-	"log"
 	"photo-gallery/hash"
 	"photo-gallery/rand"
 	"regexp"
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/spf13/viper"
 
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	userPwPepper  = viperEnvVariable("USER_PASSWORD_PEPPER")
-	hmacSecretKey = viperEnvVariable("HMAC_SECRET_KEY")
 )
 
 type User struct {
@@ -36,6 +28,7 @@ var _ UserService = &userService{}
 
 type userService struct {
 	UserDB
+	pepper string
 }
 
 // UserDB is used to interact with the users table in database.
@@ -66,12 +59,13 @@ type UserService interface {
 	UserDB
 }
 
-func NewUserService(db *gorm.DB) UserService {
+func NewUserService(db *gorm.DB, pepper, hmacKey string) UserService {
 	ug := &userGorm{db}
-	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := newUserValidator(ug, hmac)
+	hmac := hash.NewHMAC(hmacKey)
+	uv := newUserValidator(ug, hmac, pepper)
 	return &userService{
 		UserDB: uv,
+		pepper: pepper,
 	}
 }
 
@@ -81,7 +75,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 		return nil, err
 	}
 	userPasswordHashBytes := []byte(foundUser.PasswordHash)
-	pepperedPasswordBytes := []byte(password + userPwPepper)
+	pepperedPasswordBytes := []byte(password + us.pepper)
 	err = bcrypt.CompareHashAndPassword(userPasswordHashBytes, pepperedPasswordBytes)
 	if err != nil {
 		switch err {
@@ -101,13 +95,15 @@ type userValidator struct {
 	UserDB
 	hmac        hash.HMAC
 	emailRegexp *regexp.Regexp
+	pepper      string
 }
 
-func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+func newUserValidator(udb UserDB, hmac hash.HMAC, pepper string) *userValidator {
 	return &userValidator{
 		UserDB:      udb,
 		hmac:        hmac,
 		emailRegexp: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`),
+		pepper:      pepper,
 	}
 }
 
@@ -197,7 +193,7 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 	if user.Password == "" {
 		return nil
 	}
-	pwBytes := []byte(user.Password + userPwPepper)
+	pwBytes := []byte(user.Password + uv.pepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
 
 	if err != nil {
@@ -369,18 +365,4 @@ func (ug *userGorm) Update(user *User) error {
 func (ug *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
-}
-
-func viperEnvVariable(key string) string {
-
-	viper.SetConfigFile(".env")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Error while reading config file %s. \nProbably starting app not from project root directory", err)
-	}
-	value, ok := viper.Get(key).(string)
-	if !ok {
-		log.Fatalf("Invalid type assertation, or wrong variable key used")
-	}
-	return value
 }
