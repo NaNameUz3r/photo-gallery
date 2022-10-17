@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"net/http"
+	"photo-gallery/context"
 	"photo-gallery/models"
 	"photo-gallery/rand"
 	"photo-gallery/views"
+	"time"
 )
 
 // NewUsers is used to create a new Users controller.
@@ -105,6 +107,27 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		u.LoginView.Render(w, r, vd)
 	}
 	http.Redirect(w, r, "/galleries", http.StatusFound)
+}
+
+// Logout is used to delete a users session cookie, and update the user resource
+// with a new token.
+//
+// POST /logout
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Now(),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &cookie)
+
+	user := context.User(r.Context())
+	token, _ := rand.RememberToken()
+	user.RememberToken = token
+	u.us.Update(user)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // signIn is used to sign the given user in via cookies
