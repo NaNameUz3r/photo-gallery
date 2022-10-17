@@ -68,7 +68,12 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "/galleries", http.StatusFound)
+
+	alert := views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Welcome to PhotoGallery!",
+	}
+	views.RedirectAlert(w, r, "/galleries", http.StatusFound, alert)
 }
 
 type LoginForm struct {
