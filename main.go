@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"photo-gallery/controllers"
@@ -19,8 +20,11 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	cfg := DefaultConfig()
-	dbCfg := DefaultPostgresConfig()
+	boolPtr := flag.Bool("prod", false, "Provide this flag in production. This flag ensures that a .config file is provided before the application start.")
+	flag.Parse()
+
+	cfg := LoadConfig(*boolPtr)
+	dbCfg := cfg.Database
 	services, err := models.NewServices(
 		models.WithGorm(dbCfg.Dialect(), dbCfg.ConnectionString()),
 		models.WithLogMode(!cfg.IsProd()),
